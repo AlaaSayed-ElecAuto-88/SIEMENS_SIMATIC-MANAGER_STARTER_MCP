@@ -20,6 +20,7 @@ from typing import Any, Literal
 
 from mcp.server.fastmcp import FastMCP
 
+import starter
 from ladder import stl_to_ladder, stl_to_ladder_html
 from plc_values import Operand, decode, encode, parse_address
 from s7client import S7Client, S7Error, S7OnlineTransport, TcpTransport
@@ -42,7 +43,10 @@ mcp = FastMCP(
         "A 'project' argument is a project name or its path; 'program' is a program name or path and may be "
         "omitted when the project has exactly one program. To change logic: get_block_source, edit the STL/SCL "
         "text, import_source, then compile_source. Tools that change the PLC (download, start/stop, writing "
-        "values, memory reset) act on real machinery unless S7-PLCSIM is running: confirm with the user first."
+        "values, memory reset) act on real machinery unless S7-PLCSIM is running: confirm with the user first. "
+        "Drives (SINAMICS, MICROMASTER) configured with STARTER are handled by the starter_* tools: "
+        "starter_list_drives first, then starter_read_parameters / starter_search_parameters; the same "
+        "confirmation rule applies to writing to an online drive, downloading and RAM to ROM."
     ),
 )
 
@@ -207,7 +211,8 @@ def add_program(project: str, name: str) -> dict:
 def _require_plc_writes() -> None:
     if not ALLOW_PLC_WRITES:
         raise PermissionError(
-            "Tools that change the PLC (download, start/stop, writing values, memory reset) are disabled. "
+            "Tools that change the PLC or a drive (download, start/stop, writing values, memory reset, RAM to ROM) "
+            "are disabled. "
             "Set the environment variable S7_MCP_ALLOW_PLC_WRITES=1 in the server's MCP configuration to enable them."
         )
 
@@ -735,6 +740,9 @@ def get_diagnostic_buffer(project: str, station: str, cpu: str = "0.2", entries:
     result = bridge.call("diagnostic_buffer", project=project, station=station, module=cpu)
     events = _parse_diagnostic_export(result["text"])
     return {"cpu": result["cpu"], "total_events": len(events), "events": events[:entries]}
+
+
+starter.register(mcp, _require_plc_writes)
 
 
 if __name__ == "__main__":

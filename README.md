@@ -1,7 +1,10 @@
-# SIMATIC Manager MCP
+# SIMATIC Manager + STARTER MCP
 
-MCP server for Siemens STEP 7 V5.x (SIMATIC Manager, "classic"). It lets an MCP client such as Claude
-browse and edit STEP 7 projects, work online with the CPU, and read or write live values.
+MCP server for two Siemens engineering tools: STEP 7 V5.x (SIMATIC Manager, "classic") and STARTER.
+It lets an MCP client such as Claude browse and edit STEP 7 projects, work online with the CPU, read or
+write live values, and read, change and download the parameters of SINAMICS and MICROMASTER drives.
+
+Repository: `SIEMENS_SIMATIC-MANAGER_STARTER_MCP`
 
 ## How it works
 
@@ -29,6 +32,8 @@ MCP client -- server.py ---+
 | `plc_values.py` | Operand addresses and data types |
 | `ladder.py` | Draws STL networks as text ladder rungs |
 | `s7online_gateway.py` | Optional standalone PLCSIM gateway for other S7 client programs |
+| `starter.py` | MCP tools for drives configured with STARTER |
+| `bridge/starter_bridge.ps1` | STARTER scripting interface (drive units, parameters, online functions) |
 
 ## Requirements
 
@@ -52,7 +57,7 @@ Instructions for a person, or for Claude Code when given this repository's link:
 3. Register the server with the absolute path to `server.py`:
 
    ```
-   claude mcp add simatic-manager --scope user -- python "C:\path\to\Siemens-Simatic-Manager_MCP\server.py"
+   claude mcp add simatic-manager --scope user -- python "C:\path\to\SIEMENS_SIMATIC-MANAGER_STARTER_MCP\server.py"
    ```
 
    Or copy `.mcp.example.json` to `.mcp.json` (project scope) or into `claude_desktop_config.json`
@@ -122,6 +127,41 @@ project has only one program.
 These refuse to run unless the server is started with `S7_MCP_ALLOW_PLC_WRITES=1` (see the `env` block in
 `.mcp.example.json`). They act on whatever STEP 7's PG/PC interface reaches: the real CPU, or S7-PLCSIM
 when the simulator is running. Test with PLCSIM first.
+
+## Drives (STARTER)
+
+The `starter_*` tools work with SINAMICS (G120, S120, ...) and MICROMASTER 4 drive units that are
+configured with STARTER inside a STEP 7 project. They need STARTER installed (developed against V5.4.2.1)
+and run in their own worker (`bridge/starter_bridge.ps1`), which keeps the online connection between calls.
+
+| Tool | Changes | Purpose |
+| --- | --- | --- |
+| `starter_status` | – | Check STARTER's scripting interface, report version |
+| `starter_list_drives` | – | Drive units and their drive objects (Control Unit, drives, infeeds) |
+| `starter_read_parameters` | – | Parameter values with description, unit, limits, selection text |
+| `starter_search_parameters` | – | Find parameters by number or description |
+| `starter_read_faults` | – | Fault and alarm buffers (meaningful online) |
+| `starter_get_connection` | – | How STARTER reaches the drive unit |
+| `starter_export_drive_unit` | – | XML backup of a drive unit |
+| `starter_write_parameters` | project, or **drive** when online | Change parameters |
+| `starter_add_drive_unit` | project | Insert a SINAMICS drive unit |
+| `starter_add_drive_object` | project | Insert a drive, infeed or terminal module into an S120 unit |
+| `starter_set_connection` | project | Change access point / address |
+| `starter_set_online` | – | Connect to or disconnect from a drive unit |
+| `starter_upload` | project | Load the drive's parameters into the project |
+| `starter_download` | **drive** | Download the project's parameters to the drive |
+| `starter_ram_to_rom` | **drive** | Save the drive's parameters retentively |
+
+Tools marked **drive** need `S7_MCP_ALLOW_PLC_WRITES=1`, as does `starter_write_parameters` while the drive
+unit is online. A drive object is addressed by the drive unit's name plus the object's name; the object
+can be omitted when the unit has only one (G120, MICROMASTER). STARTER enforces value ranges and its own
+parameter locks (for example values fixed by the telegram selection p922) and the reason is passed on.
+
+- MICROMASTER drive units cannot be created by script, only read and changed where they already exist.
+- A project last saved by an older STARTER may ask to be converted when first opened; that dialog blocks
+  the call until it times out. Open such a project once in STARTER itself first.
+- Tested offline on G120 (CU240E-2 PN), G120C and S120 (CU320-2 DP) drive units. Not yet tested: anything
+  online (going online, live values, upload, download, RAM to ROM, fault buffers) and MICROMASTER units.
 
 ## Live values
 

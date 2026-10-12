@@ -2,7 +2,7 @@
   "mcpServers": {
     "simatic-manager": {
       "command": "python",
-      "args": ["C:\\path\\to\\simatic-manager-mcp\\server.py"],
+      "args": ["C:\\path\\to\\SIEMENS_SIMATIC-MANAGER_STARTER_MCP\\server.py"],
       "env": {
         "S7_MCP_ALLOW_PLC_WRITES": "1"
       }
